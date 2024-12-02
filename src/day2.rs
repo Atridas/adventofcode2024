@@ -1,4 +1,4 @@
-fn check_safety<'a, T: Iterator<Item = &'a i32>>(report: T) -> bool {
+fn check_safety<'a>(report: impl Iterator<Item = &'a i32>) -> bool {
     let mut ascending = None;
     let mut last = None;
     for value in report {
@@ -34,54 +34,53 @@ fn check_safety<'a, T: Iterator<Item = &'a i32>>(report: T) -> bool {
     true
 }
 
-struct ProblemDampener<'a> {
-    report: &'a Vec<i32>,
-    idx: usize,
+struct ProblemDampener<T> {
+    report: T,
     skip: usize,
 }
 
-impl<'a> ProblemDampener<'a> {
-    fn new(report: &'a Vec<i32>, skip: usize) -> Self {
-        Self {
-            report,
-            idx: 0,
-            skip,
-        }
+impl<T> ProblemDampener<T> {
+    fn new(report: T, skip: usize) -> Self {
+        Self { report, skip }
     }
 }
 
-impl<'a> Iterator for ProblemDampener<'a> {
-    type Item = &'a i32;
+impl<T> Iterator for ProblemDampener<T>
+where
+    T: Iterator,
+{
+    type Item = T::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.idx == self.skip {
-            self.idx = self.idx + 1
+        if self.skip == 0 {
+            self.report.next();
+            self.skip = std::usize::MAX
         }
-        if self.idx >= self.report.len() {
-            None
-        } else {
-            let i = self.idx;
-            self.idx = self.idx + 1;
-            Some(&self.report[i])
-        }
+        self.skip = self.skip - 1;
+        self.report.next()
     }
 }
 
 pub fn day2(input: &str) {
     let mut safe = 0;
     let mut safe2 = 0;
+
+    let mut report: Vec<i32> = Vec::new();
     for line in input.lines() {
-        let report: Vec<i32> = line
+        report.clear();
+        for a in line
             .split_ascii_whitespace()
             .map(|token| token.parse().unwrap())
-            .collect();
+        {
+            report.push(a);
+        }
 
         if check_safety(report.iter()) {
             safe = safe + 1;
             safe2 = safe2 + 1;
         } else {
             for i in 0..report.len() {
-                if check_safety(ProblemDampener::new(&report, i)) {
+                if check_safety(ProblemDampener::new(report.iter(), i)) {
                     safe2 = safe2 + 1;
                     break;
                 }
