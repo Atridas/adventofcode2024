@@ -1,4 +1,4 @@
-fn check_safety<T: Iterator<Item = i32>>(report: T) -> bool {
+fn check_safety<'a, T: Iterator<Item = &'a i32>>(report: T) -> bool {
     let mut ascending = None;
     let mut last = None;
     for value in report {
@@ -34,24 +34,24 @@ fn check_safety<T: Iterator<Item = i32>>(report: T) -> bool {
     true
 }
 
-struct ProblemDampener {
-    report: Vec<i32>,
+struct ProblemDampener<'a> {
+    report: &'a Vec<i32>,
     idx: usize,
     skip: usize,
 }
 
-impl ProblemDampener {
-    fn new(report: &Vec<i32>, skip: usize) -> Self {
+impl<'a> ProblemDampener<'a> {
+    fn new(report: &'a Vec<i32>, skip: usize) -> Self {
         Self {
-            report: report.clone(),
+            report,
             idx: 0,
             skip,
         }
     }
 }
 
-impl Iterator for ProblemDampener {
-    type Item = i32;
+impl<'a> Iterator for ProblemDampener<'a> {
+    type Item = &'a i32;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.idx == self.skip {
@@ -62,7 +62,7 @@ impl Iterator for ProblemDampener {
         } else {
             let i = self.idx;
             self.idx = self.idx + 1;
-            Some(self.report[i])
+            Some(&self.report[i])
         }
     }
 }
@@ -76,7 +76,7 @@ pub fn day2(input: &str) {
             .map(|token| token.parse().unwrap())
             .collect();
 
-        if check_safety(report.clone().into_iter()) {
+        if check_safety(report.iter()) {
             safe = safe + 1;
             safe2 = safe2 + 1;
         } else {
